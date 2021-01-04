@@ -23,6 +23,11 @@ bibliography:
 biblio-style: apalike
 lang: es-CL
 ---
+```{r, echo=FALSE}
+htmltools::img(src = knitr::image_uri("input/css/ine.png"), 
+               alt = 'logo', 
+               style = 'position:absolute; top:0; right:0; padding:10px;')
+```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(comment=NA, prompt=FALSE, cache=FALSE, echo=TRUE, results='asis', message = F, warning = F)
@@ -40,48 +45,162 @@ theme_set(theme_sjplot2())
 options(knitr.kable.NA = 'No sabe/No responde', kableExtra.auto_format = FALSE)
 ```
 
-
-
 ```{r load, echo = F}
-# 1. Cargar librarias
-pacman::p_load(tidyverse, sjPlot, summarytools,
-               magrittr, ggmosaic, texreg, kableExtra,
-               ggeffects)
+# 1. Cargar librarias--------------------
+if(!require(pacman)) install.packages("pacman")
+pacman::p_load(tidyverse,summarytools,magrittr, #manipulacion
+               srvyr, survey, # Muestras
+               texreg, kableExtra, #Modelos
+               ggeffects) #efectos
 
-# 2. Cargar base de datos
-
-```
-
-```{r, echo=FALSE}
-htmltools::img(src = knitr::image_uri("input/css/ine.png"), 
-               alt = 'logo', 
-               style = 'position:absolute; top:0; right:0; padding:10px;')
+# 2. Cargar base de datos ---------------------------
+base_gastos <- haven::read_dta("input/data/BASE_GASTOS.dta") 
+base_personas <-haven::read_dta("input/data/BASE_PERSONAS.dta")
 ```
 
 
-# Introducción
+# Sección I
 
-Hola
+En Word
 
-```{r cars}
-summary(cars)
+# Sección II 
+
+## II.1
+
+Cuente los hogares presentes en la BASE_PERSONAS. Considere que la variable FOLIO individualiza a cada hogar.
+
+```{r}
+base_personas %>% unique() %>% 
+  summarise(n = n())%>%
+  kable()
 ```
 
-## Pregunta 1 
+## II.2
 
-You can also embed plots, for example:
+Genere una variable llamada NPERSONAS_2 que cuente a las personas al interior de cada hogar. Compárela con la variable NPERSONAS (ya existente en la BASE_PERSONAS), mostrando que no hay diferencias.
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+# 1. Se crea variable y tabla
+base_personas %>% group_by(FOLIO) %>%
+  summarise(NPERSONAS_2 = n()) %>%
+  merge(base_personas) %>%  
+  select(FOLIO, NPERSONAS_2, NPERSONAS) %>% head()
+
+# 2. Se muestra si hay casos distintos
+base_personas %>% group_by(FOLIO) %>%
+  summarise(NPERSONAS_2 = n()) %>% 
+  merge(base_personas) %>%
+  select(FOLIO, NPERSONAS_2, NPERSONAS) %>% 
+  distinct(NPERSONAS_2, NPERSONAS) %>% 
+  kable()
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 
-## Pregunta 2
+## II.3
+
+Genere una tabla que muestre la media, percentil 50, mínimo, máximo y desviación estándar del ingreso disponible por hogar (ING_DISP_HOG_HD) según área de estimación (ZONA), utilizando los valores muestrales. Interprete brevemente los estadísticos de tendencia central y dispersión.
+
+```{r}
+with(base_personas, stby(ING_DISP_HOG_HD,
+     INDICES = ZONA,
+     FUN = descr, stats = "common", transpose = F))
+```
+
+- Interpretación
+
+## II.4
+
+Genere un tabulado que muestre la cantidad de sustentadores principales (SPRINCIPAL==1) según SEXO, utilizando el factor de expansión (ponderador o peso) de la encuesta (FE).
+
+```{r}
+# 1. Expandir
+exp <- base_personas %>%
+  filter(SPRINCIPAL == 1) %>% 
+  mutate(SEXO = as_factor(SEXO))
+
+# 2. Definir diseño muestral
+## En base a metodologia EPF en /input/docs, se identifica un diseno muestral complejo (bietapidoc por conglomerados)
+exp <- exp %>% as_survey_design(ids = 1, weights = FE)
+options(survey.lonely.psu = "certainty" )
+
+# 3. Tabla
+exp %>% 
+  group_by(SEXO) %>% 
+  summarise(n=survey_total(SPRINCIPAL,vartype = "ci",na.rm = TRUE)) %>% 
+  kable()
+
+```
 
 
-# Desarrollo
+## II.5
 
-Hola hola
+A partir de la variable EDAD ya existente en la BASE_PERSONAS, genere una variable de edad en tramos, llamándola EDAD_T. Esta variable debe agrupar las edades en tramos de 10 años (“0 - 9”, “10-19”… hasta “80 o más”).  En la nueva variable EDAD_T mantenga los valores -88 y -99 de la variable EDAD.
 
+```{r}
+base <- base_personas %>%
+  mutate(EDAD_T = case_when(EDAD >= 0&EDAD <= 9 ~ "0-9",
+                            EDAD >= 10&EDAD <= 19 ~ "10-19",
+                            EDAD >= 20&EDAD <= 29 ~ "20-29",
+                            EDAD >= 30&EDAD <= 39 ~ "30-39",
+                            EDAD >= 40&EDAD <= 49 ~ "40-49",
+                            EDAD >= 50&EDAD <= 59 ~ "50-59",
+                            EDAD >= 60&EDAD <= 69 ~ "60-69",
+                            EDAD >= 70&EDAD <= 79 ~ "70-79",
+                            EDAD >= 70 ~ "80 o más",
+                            EDAD == -88 ~ "-88",
+                            EDAD == -99 ~ "-99",
+                            TRUE ~ NA_character_))
+
+```
+
+- Luego tabule el SEXO según EDAD_T, utilizando el factor de expansión (FE).
+
+```{r}
+# 1. Expandir
+exp <- base %>%  
+  mutate(SEXO = as_factor(SEXO),
+         EDAD_T = as_factor(EDAD_T))
+
+# 2. Definir diseño muestral
+## En base a metodologia EPF en /input/docs, se identifica un diseno muestral complejo (bietapidoc por conglomerados)
+exp <- exp %>% as_survey_design(ids = 1, weights = FE)
+options(survey.lonely.psu = "certainty" )
+
+# 3. Tabla
+exp %>% 
+  group_by(SEXO, EDAD_T) %>% 
+  summarise(n=survey_total(vartype = "ci",na.rm = TRUE)) %>%
+  kable()
+
+```
+
+## II.6
+
+En la base gastos cada observación de esta base corresponde al gasto realizado por un hogar en una división de gasto (cada hogar está repetido como máximo 12 veces, si es que reportó gasto en todas las divisiones).
+
+- A partir de la BASE_GASTOS, genere una variable llamada GASTOT_HD_2 que sume el GASTO total de cada hogar (FOLIO).
+
+```{r}
+names(base_gastos)
+
+base_gastos %>%
+  group_by(FOLIO) %>%
+  mutate(GASTO = as.numeric(GASTO)) %>% 
+  summarise(GASTOT_HD_2 = sum(GASTO)) %>% 
+  head()
+```
+
+
+- Luego incorpore la variable GASTOT_HD_2 recién creada, a la BASE_PERSONAS, para contar con el gasto de cada hogar y compruebe que la variable GASTOT_HD_2 es una réplica de la variable GASTOT_HD ya existente en esa última base. Nota: considere iguales valores con diferencias decimales, estas diferencias se pueden deber a las formas de cálculo o software
+
+```{r}
+base <- base_gastos %>%
+  group_by(FOLIO) %>%
+  mutate(GASTO = as.numeric(GASTO)) %>% 
+  summarise(GASTOT_HD_2 = sum(GASTO))
+
+base %>% merge (base_personas, by = "FOLIO", all.x = T) %>% 
+  select(FOLIO, GASTOT_HD_2) %>% 
+  distinct()
+```
 
