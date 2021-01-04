@@ -207,7 +207,8 @@ base <- base_gastos %>%
 
 base %>% merge (base_personas, by = "FOLIO", all.x = T) %>% 
   select(FOLIO, GASTOT_HD_2) %>% 
-  distinct()
+  distinct() %>%
+  head()
 ```
 
 
