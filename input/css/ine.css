@@ -1,0 +1,96 @@
+body {
+text-align: justify
+}
+
+h1 { 
+   font-size:1.6em; 
+}
+
+h2 { 
+   font-size:1.6em; 
+}
+
+h3 { 
+   font-size:1.4em; 
+}
+
+
+h1, h2, h3, h4, h5, h6, legend {
+    color: #122f6f;
+}
+
+/* links */
+a { 
+  color: #e12120;
+}
+
+a:hover {
+ color: #123176; /* darker color when hovering */
+}
+
+/*----------------adding space white-------------*/
+
+.title {
+  margin-top: 2em !important;
+  margin-bottom: 0.75em;
+}
+
+/* Space Between TOC and 
+  Righthand side content on large screens */
+
+ @media (min-width: 992px) {
+    .col-md-9 {
+      width: 75%;
+      padding-left: 5em !important;
+    }
+ }
+
+.section h1,
+.section h2, 
+.section h3, 
+.section h4, 
+.section h5 { 
+  padding-top: 3em !important; /*adding so much padding because theme adds a margin-top: -65px by default */
+  margin-bottom: 0.75em;
+}
+
+/*----------LOGO above TOC---------*/
+
+#TOC::before {
+  content: "";
+  display: block;
+  height: 200px;
+  margin: 2em 0px 0px 0px;
+  background-image: url("epf.jpg");
+  background-size: contain;
+  background-position: center center;
+  background-repeat: no-repeat;
+}
+
+/*-----------------TOC--------------*/
+.tocify {
+  position: -webkit-sticky;
+  position: sticky; 
+  top: 120px; /*Controls where TOC stops when sticky */
+  width: 100% !important;
+  border: none;
+}
+
+   /* TOC links */
+
+.list-group-item {
+    color: #7b8a8b;
+    font-size: 16px;
+}
+
+.list-group-item.active {
+    color: #123176;
+    background-color: white;
+    border: none;
+}
+
+.list-group-item:hover, 
+.list-group-item.active:hover {
+    color: #e12120;
+    background-color: white;
+}

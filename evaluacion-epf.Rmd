@@ -1,0 +1,87 @@
+---
+title: "Encuesta Presupuestos Familiares"
+subtitle: 'Instituto Nacional de Estadística'
+author: "por Valentina Andrade"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+abstract: "El siguiente documento corresponde al análisis realizado para el  concurso de Analista socioeconómico del Subdepartamento de Estadísticas Socioeconómicas para el proyecto IX Encuesta de Presupuestos Familiares del Instituto Nacional de Estadísticas. Para ello se utilizaron las bases de datos ..., metodología y conclusiones"
+keywords: "presupuestos familiares, ingresos, gasto total"
+output:
+  html_document:
+    css: input/css/ine.css
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
+    theme: cerulean
+  pdf_document: default
+  latex_engine: pdflatex
+  word_document:
+    reference_docx: input/docs/ine-style.docx
+always_allow_html: true
+bibliography:
+- input/bib/packages.bib
+biblio-style: apalike
+lang: es-CL
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(comment=NA, prompt=FALSE, cache=FALSE, echo=TRUE, results='asis', message = F, warning = F)
+summarytools::st_options(bootstrap.css     = FALSE,
+           plain.ascii       = FALSE,   
+           style             = "rmarkdown",
+           dfSummary.silent  = TRUE, 
+           footnote          = NA,
+           subtitle.emphasis = FALSE,
+           headings =  F,
+           lang =  "es")
+summarytools::st_css()
+library(ggplot2); library(sjPlot)
+theme_set(theme_sjplot2())
+options(knitr.kable.NA = 'No sabe/No responde', kableExtra.auto_format = FALSE)
+```
+
+
+
+```{r load, echo = F}
+# 1. Cargar librarias
+pacman::p_load(tidyverse, sjPlot, summarytools,
+               magrittr, ggmosaic, texreg, kableExtra,
+               ggeffects)
+
+# 2. Cargar base de datos
+
+```
+
+```{r, echo=FALSE}
+htmltools::img(src = knitr::image_uri("input/css/ine.png"), 
+               alt = 'logo', 
+               style = 'position:absolute; top:0; right:0; padding:10px;')
+```
+
+
+# Introducción
+
+Hola
+
+```{r cars}
+summary(cars)
+```
+
+## Pregunta 1 
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+## Pregunta 2
+
+
+# Desarrollo
+
+Hola hola
+
+
