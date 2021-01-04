@@ -3,7 +3,7 @@ title: "Encuesta Presupuestos Familiares"
 subtitle: 'Instituto Nacional de Estadística'
 author: "por Valentina Andrade"
 date: "`r format(Sys.Date(), '%d %B %Y')`"
-abstract: "El siguiente documento corresponde al análisis realizado para el  concurso de Analista socioeconómico del Subdepartamento de Estadísticas Socioeconómicas para el proyecto IX Encuesta de Presupuestos Familiares del Instituto Nacional de Estadísticas. Para ello se utilizaron las bases de datos ..., metodología y conclusiones"
+abstract: "El siguiente documento corresponde al análisis realizado para el  concurso de Analista socioeconómico del Subdepartamento de Estadísticas Socioeconómicas para el proyecto IX Encuesta de Presupuestos Familiares del Instituto Nacional de Estadísticas. Para ello se utilizaron las bases de datos de Personas y Gastos. Se excluye del análisis la de Consumo"
 keywords: "presupuestos familiares, ingresos, gasto total"
 output:
   html_document:
@@ -61,7 +61,9 @@ base_personas <-haven::read_dta("input/data/BASE_PERSONAS.dta")
 
 # Sección I
 
-En Word
+Tanto en la VII EPF (2011-2012) como en la VIII EPF (2016-2017) los gastos promedio mensuales de los hogares del total de capitales regionales de Chile se concentran en Alimentos y bebidas no alcohólicas (18,6% y 18,7%), Transporte (16,4% y 15,2%) y Alojamiento, electricidad, agua (…) (13,5% y 14,3%). En los dos cortes temporales, estas tres canastas de productos concentran cerca del 50% de los gastos de los hogares. Por otro lado, los menores gastos se concentran en alcohol y cigarrillos.
+
+Tanto en términos relativos como absolutos el quinto quintil de ingresos es el que destina una mayor parte de su presupuesto al pago de transporte. Para este quintil el ítem transporte representa el 17% de su gasto total, lo que representa $379.999.
 
 # Sección II 
 
@@ -106,7 +108,11 @@ with(base_personas, stby(ING_DISP_HOG_HD,
      FUN = descr, stats = "common", transpose = F))
 ```
 
-- Interpretación
+- Interpretación: La zona 1 que es urbana tiene un ingreso medio mayor que el ingreso medio de la zona 2 (conurbana). Ahora bien, probablemente por las características de su distribución, el sector 1 tiene una mayor dispersión de los ingresos disponibles por hogar, un ingresos medio superior que en la zona 2 y zona 2 presenta una mayor rango máximo. Solo a destacar dos puntos en relación a ello:
+
+  - Al menos un 50% de los hogares de zona 1 tiene un ingreso medio disponible de $820.000, mientras que en zonas 2 $804.287
+  
+  - El máximo entre una zona y otra se diferencia en $30.767.680 y $58.796.124. Es probable que el resultado de zona 2 se deba a un caso atípico que debe ser analizado luego en los modelos por DCook.
 
 ## II.4
 
@@ -204,3 +210,72 @@ base %>% merge (base_personas, by = "FOLIO", all.x = T) %>%
   distinct()
 ```
 
+
+# Sección 3
+
+## III.1
+
+- Los modelos a utilizar deben ser probabilísticos, esto es, considerando la distribución de la variable es binomial, se deben estimar modelos que calculen las probabilidades de ocurrencia de los eventos (log odds). (Wooldrige, 2017)
+
+Ahora bien, considerando la distribución de la variable $ECOCOMPRAS$ (Jefe de Hogar, donde 1 = No y 2 = Sí) lo más lógico es realizar un modelo probit de tipo **Tobit** en donde se estiman modelos probabilísticos pero en donde la variable respuesta tiene un sesgo hacia alguna de las categorías de respuesta (en este caso el 0). 
+
+Ahora bien, los modelos **Tobit** si bien son más robustos que los modelos **Logit** pues para la estimación de máxima verosimilitud consideran la distribución de la variable, para la interpretación de los modelos es importante considerar la comparabilidad de estos modelos con otros modelos probabilistícos. Por su uso más extendido, se podría ocupar de igual manera los modelos logísticos.  
+
+```{r}
+table(base_personas$ECOMPRAS)
+```
+
+## III.2
+
+Utilizando la función *stats v3.6.2 glm* (*Fitting Generalized Linear Models*) del *software R* se estimó un modelo en base a las variables: ingreso disponible del trabajo dependiente (INGDTD_HD) y EDAD; y un modelo nulo que permite la comparación de la bondad de ajuste de los modelos. 
+
+```{r}
+# Filtro y dummy la variable dependiente
+# Ocuparemos la base que ya contiene EDAD_T 
+base <- base_personas %>%
+  filter(EDAD >= 15) %>%
+  mutate(ECOMPRAS = case_when(ECOMPRAS == 1 ~0, ECOMPRAS==2 ~1, TRUE ~NA_real_))
+
+# Estimacion de modelos
+m00 <- glm(ECOMPRAS~ 1,data = base,family = "binomial", weights = FE) #Modelo Nulo 
+m01 <- glm(ECOMPRAS~ INGDTD_HD +  EDAD,data = base,family = "binomial", weights = FE)
+```
+
+**Tabla 1.** Modelos de regresión logística para predecir la probabilidad de *ECOMPRAS*
+
+```{r, echo = F, results= 'asis'}
+htmlreg(l = list(m00,m01),
+        custom.model.names = c("Modelo Nulo","Modelo 1"),
+        custom.note = "$^{***}$ p < 0.001; $^{**}$ p < 0.01; $^{*}$ p < 0.05 <br> Errores estándar entre paréntesis \n**Nota**: Los coeficientes no están exponenciados (log odds)")
+```
+
+
+## III.3
+
+Para esta sección se debe estimar un modelo donde edad sea ingresado como un predictor categórico y no uno continuo. Por ello, 
+
+```{r, eval = F}
+m02 <- glm(ECOMPRAS~ INGDTD_HD +  EDAD_T,data = base,family = "binomial", weights = FE)
+```
+
+```{r, eval = F}
+htmlreg(l = list(m00,m01, m02),
+        custom.model.names = c("Modelo Nulo","Modelo 1", "Modelo 2"),
+        custom.note = "$^{***}$ p < 0.001; $^{**}$ p < 0.01; $^{*}$ p < 0.05 <br> Errores estándar entre paréntesis \n**Nota**: Los coeficientes no están exponenciados (log odds)")
+```
+
+Otra opción es la predicción. En base al *Modelo 1* se puede construir la ecuación del modelo de regresión (considerando intercepcto y coeficientes), y luego reemplazar en base a cada uno de los valores. 
+
+**Fórmula General**
+
+$ECOMPRAS = 1.675{e^0} + -3.439{e-^7}x INGDTD_HD +  -3.826{e^-2}xEDAD$
+
+**Predicciones**
+
+- $ECOMPRAS = 1.675{e^0} + -3.439{e^-7} x 2.000.000 +  -3.826{e^-2}x20$ 
+
+- $ECOMPRAS = 1.675{e^0} + -3.439{e^-7}x 300.000 +  -3.826{e^-2}x20$
+
+- $ECOMPRAS = 1.675{e^0} + -3.439{e^-7}x 2.000.000 +  -3.826{e^-2}x55$
+
+- $ECOMPRAS = 1.675{e^0}+ -3.439{e^-7}x 300.000 +  -3.826{e^-2}x55$
